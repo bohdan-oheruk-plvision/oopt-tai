@@ -23,11 +23,11 @@
 extern "C" {
 #endif
 
-#include "taihostif.h"
-#include "taimodule.h"
-#include "tainetworkif.h"
-#include "taistatus.h"
-#include "taitypes.h"
+#include "inc/taihostif.h"
+#include "inc/taimodule.h"
+#include "inc/tainetworkif.h"
+#include "inc/taistatus.h"
+#include "inc/taitypes.h"
 
 /**
  * @defgroup TAI TAI - Entry point specific API definitions.

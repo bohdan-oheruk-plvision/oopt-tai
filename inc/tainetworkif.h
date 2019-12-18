@@ -16,7 +16,7 @@
 #if !defined (__TAINETWORKIF_H_)
 #define __TAINETWORKIF_H_
 
-#include <taitypes.h>
+#include "inc/taitypes.h"
 
 /**
  * @defgroup TAINETWORKIF TAI - Network interface specific API definitions
@@ -266,7 +266,7 @@ typedef enum _tai_network_interface_attr_t
     TAI_NETWORK_INTERFACE_ATTR_CURRENT_PRE_FEC_BER,
 
     /**
-     * @brief The time period over which the current pre-FEC bit error rate was 
+     * @brief The time period over which the current pre-FEC bit error rate was
      *        calculated, in microseconds.
      *
      * @type #tai_uint32_t
@@ -479,7 +479,7 @@ typedef enum _tai_network_interface_attr_t
      * @flags READ_ONLY
      */
     TAI_NETWORK_INTERFACE_ATTR_CURRENT_DIFFERENTIAL_GROUP_DELAY,
-    
+
     /**
      * @brief Current Signal-to-Noise Ratio (SNR) in dB
      *
@@ -489,7 +489,7 @@ typedef enum _tai_network_interface_attr_t
      * @flags READ_ONLY
      */
     TAI_NETWORK_INTERFACE_ATTR_CURRENT_SNR,
-    
+
     /**
      * @brief The current post-FEC bit error rate
      *

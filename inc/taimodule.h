@@ -18,7 +18,7 @@
 #if !defined (__TAIMODULE_H_)
 #define __TAIMODULE_H_
 
-#include <taitypes.h>
+#include "inc/taitypes.h"
 
 /**
  * @defgroup TAIMODULE TAI - Module specific API definitions

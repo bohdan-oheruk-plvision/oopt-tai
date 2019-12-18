@@ -18,7 +18,7 @@
 #ifndef __TAIMETADATAUTILS_H_
 #define __TAIMETADATAUTILS_H_
 
-#include "taimetadatatypes.h"
+#include "meta/taimetadatatypes.h"
 
 /**
  * @defgroup TAIMETADATAUTILS TAI - Metadata Utilities Definitions

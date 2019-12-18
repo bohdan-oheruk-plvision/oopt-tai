@@ -1,2 +1,4 @@
 doc
 *.o
+bazel-*
+.vscode

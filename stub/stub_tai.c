@@ -18,8 +18,8 @@
 #include <syslog.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "tai.h"
-#include "taimetadata.h"
+#include "inc/tai.h"
+#include "meta/taimetadata.h"
 
 
 static tai_service_method_table_t adapter_host_fns;
@@ -66,11 +66,11 @@ typedef struct _stub_object_id_t {
 
 /**
  * @brief Find an attribute in a list of attributes
- * 
+ *
  * @param [in] attr_id The attribute ID to find
  * @param [in] attr_count The number of attributes in the list
  * @param [in] attr_list A list of attributes
- * 
+ *
  * @return tai_attribute_value_t* A pointer to the attribute's value, or NULL if
  *         not found.
  */
@@ -96,12 +96,12 @@ const tai_attribute_value_t * find_attribute_in_list(
  *
  * @param err A TAI_STATUS_* code
  * @param idx An index into a list of attributes
- * 
- * @return tai_status_t 
+ *
+ * @return tai_status_t
  */
 tai_status_t convert_tai_error_to_list( _In_ tai_status_t err, _In_ uint32_t idx)
 {
-    if (TAI_STATUS_IS_INVALID_ATTRIBUTE(err)    || 
+    if (TAI_STATUS_IS_INVALID_ATTRIBUTE(err)    ||
         TAI_STATUS_IS_INVALID_ATTR_VALUE(err)   ||
         TAI_STATUS_IS_ATTR_NOT_IMPLEMENTED(err) ||
         TAI_STATUS_IS_UNKNOWN_ATTRIBUTE(err)    ||
@@ -132,7 +132,7 @@ static int tai_to_syslog_level[TAI_LOG_LEVEL_MAX] = {
 };
 
 /**
- * @brief Given a TAI module, retrieve the syslog level for that module. This is 
+ * @brief Given a TAI module, retrieve the syslog level for that module. This is
  *        set by calling the #tai_log_set function. The default is WARNING.
  */
 static int api_log_level[TAI_API_MAX] = {
@@ -140,14 +140,14 @@ static int api_log_level[TAI_API_MAX] = {
 };
 
 /**
- *  @brief Log a message to the syslog facility. The message may be filtered 
+ *  @brief Log a message to the syslog facility. The message may be filtered
  *         based on the TAI API's previously set logging level.
- * 
+ *
  *  @param [in] tai_api_id The TAI API logging this message
  *  @param [in] log_level The TAI message priority
  *  @param [in] format A printf-like format string
  */
-void tai_syslog(_In_ tai_api_t tai_api_id, _In_ tai_log_level_t log_level, 
+void tai_syslog(_In_ tai_api_t tai_api_id, _In_ tai_log_level_t log_level,
                 _In_ const char *format, ...)
 {
     va_list arglist;
@@ -294,7 +294,7 @@ static tai_status_t stub_get_host_interface_attributes(
             return convert_tai_error_to_list(ret, idx);
         }
     }
-    return TAI_STATUS_SUCCESS; 
+    return TAI_STATUS_SUCCESS;
 }
 
 /**
@@ -357,16 +357,16 @@ static tai_status_t stub_set_host_interface_attributes(
             return convert_tai_error_to_list(ret, idx);
         }
     }
-    return TAI_STATUS_SUCCESS; 
+    return TAI_STATUS_SUCCESS;
 }
 
 /**
- * @brief Host interface initialization. After the call the capability 
+ * @brief Host interface initialization. After the call the capability
  *        attributes should be ready for retrieval via
  *        tai_get_host_interface_attribute().
  *
  * @param [out] host_interface_id Handle which identifies the host interface
- * @param [in] module_id Handle which identifies the module on which the host 
+ * @param [in] module_id Handle which identifies the module on which the host
  *        interface exists
  * @param [in] attr_count A count of the number of elements in the attr_list
  * @param [in] attr_list A list of attributes to set during initialization
@@ -426,7 +426,7 @@ static tai_status_t stub_create_host_interface(
 }
 
 /**
- * @brief Release all resources associated with previously created host 
+ * @brief Release all resources associated with previously created host
  *        interface
  *
  * @param [in] host_interface_id The host interface ID handle being removed
@@ -469,7 +469,7 @@ static tai_status_t stub_remove_host_interface(_In_ tai_object_id_t host_interfa
 }
 
 /**
- * @brief The host interface functions. This structure is retrieved via the 
+ * @brief The host interface functions. This structure is retrieved via the
  *        #tai_api_query function.
  */
 tai_host_interface_api_t stub_host_interface_api = {
@@ -551,7 +551,7 @@ static tai_status_t stub_get_network_interface_attributes(
             return convert_tai_error_to_list(ret, idx);
         }
     }
-    return TAI_STATUS_SUCCESS; 
+    return TAI_STATUS_SUCCESS;
 }
 
 /**
@@ -614,15 +614,15 @@ static tai_status_t stub_set_network_interface_attributes(
             return convert_tai_error_to_list(ret, idx);
         }
     }
-    return TAI_STATUS_SUCCESS; 
+    return TAI_STATUS_SUCCESS;
 }
 
 /**
- * @brief Network interface initialization. After the call the capability 
+ * @brief Network interface initialization. After the call the capability
  *        attributes should be ready for retrieval via
  *        tai_get_network_interface_attribute().
  *
- * @param [out] network_interface_id Handle which identifies the network 
+ * @param [out] network_interface_id Handle which identifies the network
  *        interface
  * @param [in] module_id Module id on which the network interface exists
  * @param [in] attr_count A count of the number of elements in the attr_list
@@ -683,10 +683,10 @@ static tai_status_t stub_create_network_interface(
 }
 
 /**
- * @brief Release all resources associated with previously created network 
+ * @brief Release all resources associated with previously created network
  *        interface
  *
- * @param [in] network_interface_id The network interface ID handle being 
+ * @param [in] network_interface_id The network interface ID handle being
  *        removed
  *
  * @return TAI_STATUS_SUCCESS on success, failure status code on error
@@ -727,7 +727,7 @@ static tai_status_t stub_remove_network_interface(_In_ tai_object_id_t network_i
 }
 
 /**
- * @brief The network interface functions. This structure is retrieved via the 
+ * @brief The network interface functions. This structure is retrieved via the
  *        #tai_api_query function.
  */
 tai_network_interface_api_t stub_network_interface_api = {
@@ -814,7 +814,7 @@ static tai_status_t stub_get_module_attributes(
             return convert_tai_error_to_list(ret, idx);
         }
     }
-    return TAI_STATUS_SUCCESS; 
+    return TAI_STATUS_SUCCESS;
 }
 
 /**
@@ -874,7 +874,7 @@ static tai_status_t stub_set_module_attributes(
             return convert_tai_error_to_list(ret, idx);
         }
     }
-    return TAI_STATUS_SUCCESS; 
+    return TAI_STATUS_SUCCESS;
 }
 
 /**
@@ -973,7 +973,7 @@ static tai_status_t stub_remove_module(_In_ tai_object_id_t module_id)
 }
 
 /**
- * @brief The module interface functions. This structure is retrieved via the 
+ * @brief The module interface functions. This structure is retrieved via the
  *        #tai_api_query function.
  */
 tai_module_api_t stub_module_api = {
@@ -1017,7 +1017,7 @@ tai_status_t tai_api_initialize(_In_ uint64_t flags,
 
     memcpy(&adapter_host_fns, services, sizeof(adapter_host_fns));
     memset(g_modules, 0, sizeof(g_modules) * STUB_NUM_MODULE);
-    initialized = true; 
+    initialized = true;
 
     if ( services->module_presence != NULL ) {
         int i;
@@ -1032,10 +1032,10 @@ tai_status_t tai_api_initialize(_In_ uint64_t flags,
 }
 
 /**
- *  @brief  Retrieve a pointer to the C-style method table for desired TAI 
+ *  @brief  Retrieve a pointer to the C-style method table for desired TAI
  *          functionality as specified by the given tai_api_id.
  *
- *  @param [in] tai_api_id TAI api ID 
+ *  @param [in] tai_api_id TAI api ID
  *  @param [out] api_method_table Caller allocated method table. The table must
  *               remain valid until the tai_api_uninitialize() is called.
  *  @return #TAI_STATUS_SUCCESS on success, failure status code on error
@@ -1058,12 +1058,12 @@ tai_status_t tai_api_query(_In_ tai_api_t tai_api_id,
             return TAI_STATUS_SUCCESS;
 
         case TAI_API_HOSTIF:
-            *(const tai_host_interface_api_t**)api_method_table = 
+            *(const tai_host_interface_api_t**)api_method_table =
                 &stub_host_interface_api;
             return TAI_STATUS_SUCCESS;
 
         case TAI_API_NETWORKIF:
-            *(const tai_network_interface_api_t**)api_method_table = 
+            *(const tai_network_interface_api_t**)api_method_table =
                 &stub_network_interface_api;
             return TAI_STATUS_SUCCESS;
 
@@ -1099,7 +1099,7 @@ tai_status_t tai_api_uninitialize(void)
 tai_object_type_t tai_object_type_query(_In_ tai_object_id_t tai_object_id)
 {
     tai_object_type_t type = ((stub_object_id_t*)&tai_object_id)->type;
-  
+
     if (TAI_OBJECT_TYPE_MAX > type) {
         return type;
     } else {
@@ -1131,10 +1131,10 @@ tai_object_id_t tai_module_id_query(_In_ tai_object_id_t tai_object_id)
 }
 
 /**
- * @brief Set log level for a tai api module. The default log level is 
+ * @brief Set log level for a tai api module. The default log level is
  *        TAI_LOG_WARN.
  *
- * @param [in] tai_api_id - TAI api ID 
+ * @param [in] tai_api_id - TAI api ID
  * @param [in] log_level - log level
  * @param [in] log_fn - log fn
  *

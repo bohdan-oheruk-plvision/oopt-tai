@@ -25,11 +25,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <tai.h>
-#include "taimetadatautils.h"
-#include "taimetadatalogger.h"
-#include "taiserialize.h"
-#include "cJSON.h"
+#include "inc/tai.h"
+#include "meta/taimetadatautils.h"
+#include "meta/taimetadatalogger.h"
+#include "meta/taiserialize.h"
+#include "meta/cJSON.h"
 
 #define PRIMITIVE_BUFFER_SIZE 128
 #define MAX_CHARS_PRINT 25

@@ -18,9 +18,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <tai.h>
-#include "taimetadatautils.h"
-#include "taimetadata.h"
+#include "inc/tai.h"
+#include "meta/taimetadatautils.h"
+#include "meta/taimetadata.h"
 
 bool tai_metadata_is_allowed_object_type(
         _In_ const tai_attr_metadata_t* metadata,

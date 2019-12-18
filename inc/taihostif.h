@@ -16,7 +16,7 @@
 #if !defined (__TAIHOSTIF_H_)
 #define __TAIHOSTIF_H_
 
-#include <taitypes.h>
+#include "inc/taitypes.h"
 
 /**
  * @defgroup TAIHOSTIF TAI - Host Interface specific API definitions
