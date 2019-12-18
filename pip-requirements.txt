@@ -1,0 +1,8 @@
+# Copyright 2019-present Open Networking Foundation
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+clang
+jinja2
+enum34
