@@ -15,38 +15,50 @@ py_binary(
     deps = depset(meta_all_requirements).to_list(),
 )
 
+cc_library (
+    name = "tai_hdrs",
+    hdrs = [
+        "inc/tai.h",
+        "inc/taihostif.h",
+        "inc/taimodule.h",
+        "inc/tainetworkif.h",
+        "inc/taistatus.h",
+        "inc/taitypes.h"
+    ],
+)
+
 genrule(
     name = "taimetadata_c",
-    srcs = [
+    cmd = "$(location :main) --clang-lib " + LIBCLANG_PATH + " $(location inc/tai.h) && mv taimetadata.c $(@D)",
+    outs = [
+        "taimetadata.c",
+    ],
+    tools = [
+        ":main", 
         "inc/tai.h",
         "inc/taihostif.h",
         "inc/taimodule.h",
         "inc/tainetworkif.h",
         "inc/taistatus.h",
         "inc/taitypes.h",
-    ],
-    cmd = "$(location :main) --clang-lib " + LIBCLANG_PATH + " inc/tai.h && mv taimetadata.c $(@D)",
-    outs = [
-        "taimetadata.c",
-    ],
-    tools = [":main"],
+    ]
 )
 
 genrule(
     name = "taimetadata_h",
-    srcs = [
-            "inc/tai.h",
-            "inc/taihostif.h",
-            "inc/taimodule.h",
-            "inc/tainetworkif.h",
-            "inc/taistatus.h",
-            "inc/taitypes.h",
-    ],
-    cmd = "$(location :main) --clang-lib " + LIBCLANG_PATH + " inc/tai.h && mv taimetadata.h $(@D)",
+    cmd = "$(location :main) --clang-lib " + LIBCLANG_PATH + " $(location inc/tai.h) && mv taimetadata.h $(@D)",
     outs = [
         "taimetadata.h",
     ],
-    tools = [":main"]
+    tools = [
+        ":main", 
+        "inc/tai.h",
+        "inc/taihostif.h",
+        "inc/taimodule.h",
+        "inc/tainetworkif.h",
+        "inc/taistatus.h",
+        "inc/taitypes.h",
+    ]
 )
 
 cc_library(
@@ -64,45 +76,17 @@ cc_library(
         "meta/cJSON.h",
         "meta/taimetadatalogger.h",
         "meta/taiserialize.h",
-        "inc/tai.h",
-        "inc/taihostif.h",
-        "inc/taimodule.h",
-        "inc/tainetworkif.h",
-        "inc/taistatus.h",
-        "inc/taitypes.h",
-    ] + glob(["*.h"]),
-    copts = [
-        "-fPIC",
-        "-Iinc",
-        "-Imeta",
-    ]
-)
-
-cc_library(
-    name = "tai",
-    srcs = [
-        "stub/stub_tai.c"
-    ],
-    hdrs = [
-        ":taimetadata_h",
-        "meta/taimetadatatypes.h",
-        "meta/taimetadatautils.h",
-        "meta/cJSON.h",
-        "meta/taimetadatalogger.h",
-        "meta/taiserialize.h",
-        "inc/tai.h",
-        "inc/taihostif.h",
-        "inc/taimodule.h",
-        "inc/tainetworkif.h",
-        "inc/taistatus.h",
-        "inc/taitypes.h",
     ],
     deps = [
-        ":metatai"
+        ":tai_hdrs"
     ],
     copts = [
         "-fPIC",
-        "-Iinc",
-        "-Imeta",
-    ]
+    ],
+    includes = [
+        "inc/",
+        "meta/",
+    ],
+    
+    visibility = [ '//visibility:public' ],
 )
