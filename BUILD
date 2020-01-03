@@ -23,7 +23,7 @@ cc_library (
         "inc/taimodule.h",
         "inc/tainetworkif.h",
         "inc/taistatus.h",
-        "inc/taitypes.h"
+        "inc/taitypes.h",
     ],
 )
 
@@ -61,14 +61,31 @@ genrule(
     ]
 )
 
-cc_library(
-    name = "metatai",
+#--------------------------------------------------------
+cc_binary(
+    name = "libtai-stub.so",
     srcs = [
-        ":taimetadata_c",
-        "meta/taiserialize.c",
-        "meta/cJSON.c",
-        "meta/taimetadatautils.c",
+        "stub/stub_tai.c",
     ],
+    deps = [
+        ":libmetatai",
+    ],
+    includes = [
+        "inc/",
+        "meta/",
+    ],
+    linkshared = True,
+)
+
+cc_import(
+    name = "libtai-stub",
+    shared_library = "libtai-stub.so",
+    visibility = [ '//visibility:public' ],
+)
+#--------------------------------------------------------
+
+cc_library(
+    name = "meta_hdrs",
     hdrs = [
         ":taimetadata_h",
         "meta/taimetadatatypes.h",
@@ -77,12 +94,21 @@ cc_library(
         "meta/taimetadatalogger.h",
         "meta/taiserialize.h",
     ],
+)
+
+cc_binary(
+    name = "libmetatai.so",
+    srcs = [
+        ":taimetadata_c",
+        "meta/taiserialize.c",
+        "meta/cJSON.c",
+        "meta/taimetadatautils.c",
+    ],
     deps = [
-        ":tai_hdrs"
+        ":tai_hdrs",
+        ":meta_hdrs",
     ],
-    copts = [
-        "-fPIC",
-    ],
+    linkshared = True,
     includes = [
         "inc/",
         "meta/",
@@ -90,3 +116,39 @@ cc_library(
     
     visibility = [ '//visibility:public' ],
 )
+
+cc_import(
+    name = "libmetatai",
+    hdrs = [
+        ":taimetadata_h",
+        "meta/taimetadatatypes.h",
+        "meta/taimetadatautils.h",
+        "meta/cJSON.h",
+        "meta/taimetadatalogger.h",
+        "meta/taiserialize.h",
+        "inc/tai.h",
+        "inc/taihostif.h",
+        "inc/taimodule.h",
+        "inc/tainetworkif.h",
+        "inc/taistatus.h",
+        "inc/taitypes.h",
+    ],
+    shared_library = "libmetatai.so",
+    visibility = [ '//visibility:public' ],
+)
+
+cc_binary(
+    name = "test",
+    srcs = [
+        "test/test.c",
+    ],
+    deps = [
+        ":libmetatai",
+        ":libtai-stub",
+    ],
+    includes = [
+        "inc/",
+        "meta/",
+    ],
+)
+
