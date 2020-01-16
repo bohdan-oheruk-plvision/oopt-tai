@@ -298,14 +298,14 @@ static tai_status_t stub_get_host_interface_attributes(
 }
 
 /**
- * @brief Set the value of an attribute
+ * @brief Set the value of an attribute without notification emitting
  *
  * @param [in] host_interface_id The host interface ID handle
  * @param [in] attr A pointer to the attribute to be set
  *
  * @return TAI_STATUS_SUCCESS on success, failure status code on error
  */
-static tai_status_t stub_set_host_interface_attribute(
+static tai_status_t stub_set_host_interface_attribute_without_notification(
    _In_ tai_object_id_t        host_interface_id,
    _In_ const tai_attribute_t *attr)
 {
@@ -335,6 +335,58 @@ static tai_status_t stub_set_host_interface_attribute(
 }
 
 /**
+ * @brief Notify adapter host about host interface updated attributes
+ *
+ * @param [in] module_id The network interface ID handle
+ * @param [in] attr_count A count of the number of elements in the attr_list
+ * @param [in] attr_list A list of updated attributes
+ *
+ * @return TAI_STATUS_SUCCESS on success, failure status code on error
+ */
+static tai_status_t stub_common_host_interface_notificaton(
+    _In_ tai_object_id_t host_interface_id, 
+    _In_ uint32_t               attr_count,
+    _In_ const tai_attribute_t *attr_list) {
+    if (attr_count < 1)
+        return TAI_STATUS_FAILURE;
+
+    tai_attribute_t notification_attr;
+    notification_attr.id = TAI_HOST_INTERFACE_ATTR_NOTIFY;
+    tai_status_t status = stub_get_host_interface_attribute(host_interface_id, 
+                                                            &notification_attr);
+
+    if (status != TAI_STATUS_SUCCESS)
+        return TAI_STATUS_FAILURE;
+
+    notification_attr.value.notification.notify(
+                                notification_attr.value.notification.context, 
+                                host_interface_id, attr_count, attr_list);
+    return TAI_STATUS_SUCCESS;
+}
+
+/**
+ * @brief Retrieve the value of an attribute
+ *
+ * @param [in] host_interface_id The host interface ID handle
+ * @param [in,out] attr A pointer to the attribute to be retrieved
+ *
+ * @return TAI_STATUS_SUCCESS on success, failure status code on error
+ */
+static tai_status_t stub_set_host_interface_attribute(
+    _In_ tai_object_id_t     host_interface_id,
+    _In_ const tai_attribute_t *attr)
+{
+    tai_status_t status = 
+                    stub_set_host_interface_attribute_without_notification(
+                                                            host_interface_id, 
+                                                            attr);
+    if (status == TAI_STATUS_SUCCESS) {
+        stub_common_host_interface_notificaton(host_interface_id, 1, attr);
+    }
+    return status;
+}
+
+/**
  * @brief Set the values from a list of attributes
  *
  * @param [in] host_interface_id The host interface ID handle
@@ -352,11 +404,19 @@ static tai_status_t stub_set_host_interface_attributes(
     tai_status_t ret;
 
     for (idx = 0; idx < attr_count; idx++) {
-        ret = stub_set_host_interface_attribute(host_interface_id, attr_list++);
+        ret = stub_set_host_interface_attribute_without_notification(
+                                                            host_interface_id, 
+                                                            attr_list++);
         if (ret) {
+            stub_common_host_interface_notificaton(host_interface_id, 
+                                                   idx, 
+                                                   attr_list);
             return convert_tai_error_to_list(ret, idx);
         }
     }
+    stub_common_host_interface_notificaton(host_interface_id, 
+                                           attr_count, 
+                                           attr_list);
     return TAI_STATUS_SUCCESS; 
 }
 
@@ -554,6 +614,39 @@ static tai_status_t stub_get_network_interface_attributes(
     return TAI_STATUS_SUCCESS; 
 }
 
+
+/**
+ * @brief Notify adapter host about network interface updated attributes
+ *
+ * @param [in] network_interface_id The network interface ID handle
+ * @param [in] attr_count A count of the number of elements in the attr_list
+ * @param [in] attr_list A list of updated attributes
+ *
+ * @return TAI_STATUS_SUCCESS on success, failure status code on error
+ */
+static tai_status_t stub_network_interface_notificaton(
+    _In_ tai_attr_id_t notification_id,
+    _In_ tai_object_id_t network_interface_id, 
+    _In_ uint32_t               attr_count,
+    _In_ const tai_attribute_t *attr_list) {
+    if (attr_count < 1)
+        return TAI_STATUS_FAILURE;
+
+    tai_attribute_t notification_attr;
+    notification_attr.id = notification_id;
+    tai_status_t status = stub_get_network_interface_attribute(
+                                                        network_interface_id, 
+                                                        &notification_attr);
+
+    if (status != TAI_STATUS_SUCCESS)
+        return TAI_STATUS_FAILURE;
+
+    notification_attr.value.notification.notify(
+                    notification_attr.value.notification.context, 
+                    network_interface_id, attr_count, attr_list);
+    return TAI_STATUS_SUCCESS;
+}
+
 /**
  * @brief Set the value of an attribute
  *
@@ -562,7 +655,7 @@ static tai_status_t stub_get_network_interface_attributes(
  *
  * @return TAI_STATUS_SUCCESS on success, failure status code on error
  */
-static tai_status_t stub_set_network_interface_attribute(
+static tai_status_t stub_set_network_interface_attribute_without_notification(
    _In_ tai_object_id_t        network_interface_id,
    _In_ const tai_attribute_t *attr)
 {
@@ -592,7 +685,35 @@ static tai_status_t stub_set_network_interface_attribute(
 }
 
 /**
- * @brief Set the values from a list of attributes
+ * @brief Set the value of an attribute
+ *
+ * @param [in] network_interface_id The network interface ID handle
+ * @param [in] attr A pointer to the attribute to be set
+ *
+ * @return TAI_STATUS_SUCCESS on success, failure status code on error
+ */
+static tai_status_t stub_set_network_interface_attribute(
+   _In_ tai_object_id_t        network_interface_id,
+   _In_ const tai_attribute_t *attr)
+{
+    tai_status_t status = 
+                stub_set_network_interface_attribute_without_notification(
+                                                    network_interface_id, attr);
+    if (status == TAI_STATUS_SUCCESS) {
+        stub_network_interface_notificaton(TAI_NETWORK_INTERFACE_ATTR_NOTIFY, 
+                                           network_interface_id, 1, attr);
+    }
+    else {
+        stub_network_interface_notificaton(
+            TAI_NETWORK_INTERFACE_ATTR_ALARM_NOTIFICATION,
+            network_interface_id, 1, attr);
+    }
+
+    return status;
+}
+
+/**
+ * @brief Set the values from a list of attributes and notify host adapter
  *
  * @param [in] network_interface_id The network interface ID handle
  * @param [in] attr_count A count of the number of elements in the attr_list
@@ -609,11 +730,21 @@ static tai_status_t stub_set_network_interface_attributes(
     tai_status_t ret;
 
     for (idx = 0; idx < attr_count; idx++) {
-        ret = stub_set_network_interface_attribute(network_interface_id, attr_list++);
+        ret = stub_set_network_interface_attribute_without_notification(
+                                            network_interface_id, attr_list++);
         if (ret) {
+            stub_network_interface_notificaton(
+                TAI_NETWORK_INTERFACE_ATTR_NOTIFY, network_interface_id, 
+                idx, attr_list);
+            stub_network_interface_notificaton(
+                TAI_NETWORK_INTERFACE_ATTR_ALARM_NOTIFICATION, 
+                network_interface_id, 1, attr_list + idx);
             return convert_tai_error_to_list(ret, idx);
         }
     }
+    stub_network_interface_notificaton(TAI_NETWORK_INTERFACE_ATTR_NOTIFY, 
+                                       network_interface_id, attr_count, 
+                                       attr_list);
     return TAI_STATUS_SUCCESS; 
 }
 
@@ -818,17 +949,82 @@ static tai_status_t stub_get_module_attributes(
 }
 
 /**
- * @brief Set the value of an attribute
+ * @brief Notify adapter host about module state attribute update
+ *
+ * @param [in] module_id The network interface ID handle
+ * @param [in] attr_count A count of the number of elements in the attr_list
+ * @param [in] attr_list A list of updated attributes
+ *
+ * @return TAI_STATUS_SUCCESS on success, failure status code on error
+ */
+static tai_status_t stub_module_state_change_notificaton(
+    _In_ tai_object_id_t module_id, 
+    _In_ tai_module_oper_status_t oper_status) {
+
+    tai_attribute_t notification_attr;
+    notification_attr.id = TAI_MODULE_ATTR_MODULE_STATE_CHANGE_NOTIFY;
+    tai_status_t status = stub_get_network_interface_attribute(
+                                                            module_id, 
+                                                            &notification_attr);
+
+    if (status != TAI_STATUS_SUCCESS)
+        return TAI_STATUS_FAILURE;
+
+    if (notification_attr.value.ptr == NULL)
+        return TAI_STATUS_FAILURE;
+
+    tai_module_state_change_notification_fn state_func =
+           (tai_module_state_change_notification_fn)notification_attr.value.ptr;
+    
+    state_func(module_id, oper_status);
+
+    return TAI_STATUS_SUCCESS;
+}
+
+
+/**
+ * @brief Notify adapter host about module updated attributes
+ *
+ * @param [in] module_id The network interface ID handle
+ * @param [in] attr_count A count of the number of elements in the attr_list
+ * @param [in] attr_list A list of updated attributes
+ *
+ * @return TAI_STATUS_SUCCESS on success, failure status code on error
+ */
+static tai_status_t stub_common_module_notificaton(
+    _In_ tai_object_id_t module_id, 
+    _In_ uint32_t               attr_count,
+    _In_ const tai_attribute_t *attr_list) {
+    if (attr_count < 1)
+        return TAI_STATUS_FAILURE;
+
+    tai_attribute_t notification_attr;
+    notification_attr.id = TAI_MODULE_ATTR_NOTIFY;
+    tai_status_t status = stub_get_network_interface_attribute(
+                                                            module_id, 
+                                                            &notification_attr);
+
+    if (status != TAI_STATUS_SUCCESS)
+        return TAI_STATUS_FAILURE;
+
+    notification_attr.value.notification.notify(
+                                notification_attr.value.notification.context, 
+                                module_id, attr_count, attr_list);
+    return TAI_STATUS_SUCCESS;
+}
+
+/**
+ * @brief Set the value of an attribute without notifications
  *
  * @param [in] module_id The module ID handle
  * @param [in] attr A pointer to the attribute to be set
  *
  * @return TAI_STATUS_SUCCESS on success, failure status code on error
  */
-static tai_status_t stub_set_module_attribute(
+static tai_status_t stub_set_module_attribute_without_notification(
    _In_ tai_object_id_t        module_id,
-   _In_ const tai_attribute_t *attr)
-{
+   _In_ const tai_attribute_t *attr) {
+
     stub_object_id_t id = *(stub_object_id_t*)&module_id;
     stub_object_t *object;
     const tai_attr_metadata_t* meta = NULL;
@@ -852,6 +1048,31 @@ static tai_status_t stub_set_module_attribute(
 }
 
 /**
+ * @brief Set the value of an attribute
+ *
+ * @param [in] module_id The module ID handle
+ * @param [in] attr A pointer to the attribute to be set
+ *
+ * @return TAI_STATUS_SUCCESS on success, failure status code on error
+ */
+static tai_status_t stub_set_module_attribute(
+   _In_ tai_object_id_t        module_id,
+   _In_ const tai_attribute_t *attr)
+{
+    tai_status_t status = stub_set_module_attribute_without_notification(
+                                                                    module_id, 
+                                                                    attr);
+
+    if (status == TAI_STATUS_SUCCESS) {
+        if (attr->id == TAI_MODULE_ATTR_OPER_STATUS)
+            stub_module_state_change_notificaton(module_id, attr->value.s32);
+
+        stub_common_module_notificaton(module_id, 1, attr);
+    }
+    return status;
+}
+
+/**
  * @brief Set the values from a list of attributes
  *
  * @param [in] module_id The module ID handle
@@ -869,11 +1090,14 @@ static tai_status_t stub_set_module_attributes(
     tai_status_t ret;
 
     for (idx = 0; idx < attr_count; idx++) {
-        ret = stub_set_module_attribute(module_id, attr_list++);
+        ret = stub_set_module_attribute_without_notification(module_id, 
+                                                             attr_list++);
         if (ret) {
+            stub_common_module_notificaton(module_id, idx, attr_list);
             return convert_tai_error_to_list(ret, idx);
         }
     }
+    stub_common_module_notificaton(module_id, attr_count, attr_list);
     return TAI_STATUS_SUCCESS; 
 }
 
