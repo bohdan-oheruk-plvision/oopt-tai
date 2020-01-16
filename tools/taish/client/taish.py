@@ -278,14 +278,14 @@ def loop(stub, modules, module, netif, hostif):
     session = PromptSession()
 
     while True:
-        p = "> "
+        p = unicode("> ")
         if module:
             loc = module.location
-            p = "module({})> ".format(loc)
+            p = unicode("module({})> ".format(loc))
             if netif:
-                p = "module({})/netif({})> ".format(loc, netif.index)
+                p = unicode("module({})/netif({})> ".format(loc, netif.index))
             elif hostif:
-                p = "module({})/hostif({})> ".format(loc, hostif.index)
+                p = unicode("module({})/hostif({})> ".format(loc, hostif.index))
 
         c = FuzzyCompleter(TAIShellCompleter(stub, modules, module, netif, hostif))
         line = session.prompt(p, completer=c).strip()

@@ -6,3 +6,6 @@
 clang
 jinja2
 enum34
+prompt_toolkit
+wcwidth
+tabulate
