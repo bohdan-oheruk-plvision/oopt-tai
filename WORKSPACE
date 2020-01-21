@@ -24,3 +24,39 @@ pip_import(
 )
 load("@tai_meta_deps//:requirements.bzl", meta_deps_pip_install = "pip_install")
 meta_deps_pip_install()
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "com_github_grpc_grpc",
+    urls = [
+        "https://github.com/grpc/grpc/archive/99fd5c391a435e2677b6caa7fd25089c484a32ab.tar.gz",
+    ],
+    strip_prefix = "grpc-99fd5c391a435e2677b6caa7fd25089c484a32ab",
+)
+
+http_archive(
+    name = "build_stack_rules_proto",
+    urls = ["https://github.com/stackb/rules_proto/archive/2f4e4f62a3d7a43654d69533faa0652e1c4f5082.tar.gz"],
+    strip_prefix = "rules_proto-2f4e4f62a3d7a43654d69533faa0652e1c4f5082",
+)
+
+load("@build_stack_rules_proto//python:deps.bzl", "python_grpc_library")
+python_grpc_library()
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+grpc_deps()
+
+pip_import(
+    name = "protobuf_py_deps",
+    requirements = "@build_stack_rules_proto//python/requirements:protobuf.txt",
+)
+load("@protobuf_py_deps//:requirements.bzl", protobuf_pip_install = "pip_install")
+protobuf_pip_install()
+
+pip_import(
+    name = "grpc_py_deps",
+    requirements = "@build_stack_rules_proto//python:requirements.txt",
+)
+load("@grpc_py_deps//:requirements.bzl", grpc_pip_install = "pip_install")
+grpc_pip_install()
