@@ -2,6 +2,7 @@
 #include <memory>
 #include "tai.h"
 #include "exception.hpp"
+#include "platform.hpp"
 
 static std::unique_ptr<tai::framework::Platform> g_platform;
 

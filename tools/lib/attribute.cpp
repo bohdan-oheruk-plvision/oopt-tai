@@ -8,7 +8,8 @@ namespace tai {
         tai_attribute_t attr = {.id = meta->attrid};
         auto ret = tai_deserialize_attribute_value(value.c_str(), meta, &attr.value, option);
         if ( ret == TAI_STATUS_BUFFER_OVERFLOW ) {
-            tai_alloc_info_t alloc_info = { .reference = &attr };
+            tai_alloc_info_t alloc_info;
+            alloc_info.reference = &attr;
             ret = tai_metadata_alloc_attr_value(meta, &attr, &alloc_info);
             if ( ret != TAI_STATUS_SUCCESS ) {
                 throw Exception(ret);

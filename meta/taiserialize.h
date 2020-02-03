@@ -15,6 +15,8 @@
  *
  */
 
+#include "taimetadatatypes.h"
+
 #ifndef __TAISERIALIZE_H_
 #define __TAISERIALIZE_H_
 

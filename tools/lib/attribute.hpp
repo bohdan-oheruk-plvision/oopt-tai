@@ -29,7 +29,8 @@ namespace tai {
                 tai_attribute_t attr{.id = meta->attrid};
                 tai_status_t ret;
                 for (int i = 0; i < 3; i++ ) {
-                    tai_alloc_info_t alloc_info = { .reference = &attr };
+                    tai_alloc_info_t alloc_info;
+                    alloc_info.reference = &attr;
                     ret = tai_metadata_alloc_attr_value(meta, &attr, &alloc_info);
                     if ( ret != TAI_STATUS_SUCCESS ) {
                         goto err;
@@ -55,9 +56,8 @@ err:
                     throw Exception(TAI_STATUS_INVALID_PARAMETER);
                 }
                 tai_attribute_t attr = {.id = src->id};
-                tai_alloc_info_t info{
-                    .reference=src,
-                };
+                tai_alloc_info_t info;
+                info.reference=src;
                 auto ret = tai_metadata_alloc_attr_value(meta, &attr, &info);
                 if ( ret != TAI_STATUS_SUCCESS ) {
                     throw Exception(ret);
