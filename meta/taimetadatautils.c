@@ -326,16 +326,15 @@ bool tai_metadata_is_condition_met(
 
 #define _TAI_META_ALLOC_LIST(valuename, type)\
     value->valuename.count = size;\
-    value->valuename.list = calloc(size, sizeof(type));\
+    value->valuename.list = realloc(value->valuename.list, size * sizeof(type));\
     if ( value->valuename.list == NULL ) {\
         return TAI_STATUS_NO_MEMORY;\
     }\
 
 #define _TAI_META_FREE_LIST(valuename)\
-    if ( value->valuename.count != 0 ) {\
-        value->valuename.count = 0;\
-        free(value->valuename.list);\
-    }
+    value->valuename.count = 0;\
+    free(value->valuename.list);\
+    value->valuename.list = NULL;\
 
 #define _TAI_META_COPY_LIST(valuename, type)\
     if( out->valuename.count < in->valuename.count ) {\
@@ -428,6 +427,7 @@ tai_status_t _tai_metadata_free_attr_value(
         for ( i = 0; i < value->objmaplist._alloced; i++ ) {
             value->objmaplist.list[i].value.count = 0;
             free(value->objmaplist.list[i].value.list);
+            value->objmaplist.list[i].value.list = NULL;
         }
         _TAI_META_FREE_LIST(objmaplist);
         break;
@@ -440,6 +440,71 @@ tai_status_t _tai_metadata_free_attr_value(
             }
         }
         _TAI_META_FREE_LIST(attrlist);
+        break;
+    default:
+        TAI_META_LOG_ERROR("unsupported value type: %d", metadata->attrvaluetype);
+        return TAI_STATUS_NOT_SUPPORTED;
+    }
+    return TAI_STATUS_SUCCESS;
+}
+
+static tai_status_t _tai_metadata_clear_attr_value(
+        _In_ const tai_attr_metadata_t* const metadata,
+        _In_ tai_attribute_value_t* const value) {
+    if ( metadata == NULL || value == NULL ) {
+        return TAI_STATUS_INVALID_PARAMETER;
+    }
+    switch( metadata->attrvaluetype ) {
+    case TAI_ATTR_VALUE_TYPE_BOOLDATA:
+    case TAI_ATTR_VALUE_TYPE_CHARDATA:
+    case TAI_ATTR_VALUE_TYPE_U8:
+    case TAI_ATTR_VALUE_TYPE_S8:
+    case TAI_ATTR_VALUE_TYPE_U16:
+    case TAI_ATTR_VALUE_TYPE_S16:
+    case TAI_ATTR_VALUE_TYPE_U32:
+    case TAI_ATTR_VALUE_TYPE_S32:
+    case TAI_ATTR_VALUE_TYPE_U64:
+    case TAI_ATTR_VALUE_TYPE_S64:
+    case TAI_ATTR_VALUE_TYPE_FLT:
+    case TAI_ATTR_VALUE_TYPE_PTR:
+    case TAI_ATTR_VALUE_TYPE_OID:
+    case TAI_ATTR_VALUE_TYPE_U32RANGE:
+    case TAI_ATTR_VALUE_TYPE_S32RANGE:
+    case TAI_ATTR_VALUE_TYPE_NOTIFICATION:
+        memset(value, 0, sizeof(tai_attribute_value_t));
+        break;
+    case TAI_ATTR_VALUE_TYPE_OBJLIST:
+        value->objlist.count = 0;
+        break;
+    case TAI_ATTR_VALUE_TYPE_CHARLIST:
+        value->charlist.count = 0;
+        break;
+    case TAI_ATTR_VALUE_TYPE_U8LIST:
+        value->u8list.count = 0;
+        break;
+    case TAI_ATTR_VALUE_TYPE_S8LIST:
+        value->s8list.count = 0;
+        break;
+    case TAI_ATTR_VALUE_TYPE_U16LIST:
+        value->u16list.count = 0;
+        break;
+    case TAI_ATTR_VALUE_TYPE_S16LIST:
+        value->s16list.count = 0;
+        break;
+    case TAI_ATTR_VALUE_TYPE_U32LIST:
+        value->u32list.count = 0;
+        break;
+    case TAI_ATTR_VALUE_TYPE_S32LIST:
+        value->s32list.count = 0;
+        break;
+    case TAI_ATTR_VALUE_TYPE_FLOATLIST:
+        value->floatlist.count = 0;
+        break;
+    case TAI_ATTR_VALUE_TYPE_OBJMAPLIST:
+        value->objmaplist.count = 0;
+        break;
+    case TAI_ATTR_VALUE_TYPE_ATTRLIST:
+        value->attrlist.count = 0;
         break;
     default:
         TAI_META_LOG_ERROR("unsupported value type: %d", metadata->attrvaluetype);
@@ -492,10 +557,10 @@ static int _tai_list_size(
         return value->objmaplist.count;
     case TAI_ATTR_VALUE_TYPE_ATTRLIST:
         return value->attrlist.count;
+    default:
+        TAI_META_LOG_ERROR("unsupported value type: %d", metadata->attrvaluetype);
+        return -1;
     }
-
-    TAI_META_LOG_ERROR("unsupported value type: %d", metadata->attrvaluetype);
-    return -1;
 }
 
 
@@ -507,18 +572,15 @@ static tai_status_t _tai_metadata_alloc_attr_value(
         return TAI_STATUS_INVALID_PARAMETER;
     }
 
-    // used only for TAI_ATTR_VALUE_TYPE_ATTRLIST allocation
-    tai_attr_metadata_t nested_meta = *metadata;
-    nested_meta.attrvaluetype = nested_meta.attrlistvaluetype;
-    nested_meta.attrlistvaluetype = TAI_ATTR_VALUE_TYPE_UNSPECIFIED;
-    tai_alloc_info_t nested_info = { .list_size = DEFAULT_LIST_SIZE };
-
     int size = DEFAULT_LIST_SIZE, i, j;
     if ( info != NULL ) {
         size = info->list_size;
         if ( info->reference != NULL ) {
             size = _tai_list_size(metadata, &info->reference->value);
         }
+    }
+    if ( size == 0 ) {
+        size = DEFAULT_LIST_SIZE;
     }
     switch( metadata->attrvaluetype ) {
     case TAI_ATTR_VALUE_TYPE_BOOLDATA:
@@ -569,30 +631,50 @@ static tai_status_t _tai_metadata_alloc_attr_value(
         _TAI_META_ALLOC_LIST(objmaplist, tai_object_map_list_t);
         value->attrlist._alloced = size;
         for ( i = 0; i < size; i++ ) {
-            value->objmaplist.list[i].value.count = size;
-            value->objmaplist.list[i].value.list = calloc(size, sizeof(tai_object_map_t));
+            int ssize = size;
+            if ( info != NULL && info->reference != NULL ) {
+                int s = info->reference->value.objmaplist.list[i].value.count;
+                ssize = (s > 0) ? s : DEFAULT_LIST_SIZE;
+            }
+            value->objmaplist.list[i].value.count = ssize;
+            value->objmaplist.list[i].value.list = calloc(ssize, sizeof(tai_object_map_t));
             if ( value->objmaplist.list[i].value.list == NULL ) {
                 for ( j = 0; j < i; j++ ) {
                     free(value->objmaplist.list[j].value.list);
+                    value->objmaplist.list[j].value.list = NULL;
+                    value->objmaplist.list[j].value.count = 0;
                 }
                 _TAI_META_FREE_LIST(objmaplist);
+                value->attrlist._alloced = 0;
                 return TAI_STATUS_NO_MEMORY;
             }
         }
         break;
     case TAI_ATTR_VALUE_TYPE_ATTRLIST:
-        _TAI_META_ALLOC_LIST(attrlist, tai_attribute_value_t);
-        value->attrlist._alloced = size;
-        if ( info != NULL && info->reference != NULL && info->reference->value.attrlist.count > 0 ) {
-            nested_info.list_size = _tai_list_size(&nested_meta, &info->reference->value.attrlist.list[0]);
-        }
-        for ( i = 0; i < size; i++ ) {
-            if ( _tai_metadata_alloc_attr_value(&nested_meta, &(value->attrlist.list[i]), &nested_info) < 0 ) {
-                for ( j = 0; j < i; j++ ) {
-                    _tai_metadata_free_attr_value(&nested_meta, &value->attrlist.list[j], &nested_info);
+        {
+            _TAI_META_ALLOC_LIST(attrlist, tai_attribute_value_t);
+            memset(value->attrlist.list, 0, size * sizeof(tai_attribute_value_t));\
+            value->attrlist._alloced = size;
+
+            tai_attr_metadata_t nested_meta = *metadata;
+            nested_meta.attrvaluetype = nested_meta.attrlistvaluetype;
+            nested_meta.attrlistvaluetype = TAI_ATTR_VALUE_TYPE_UNSPECIFIED;
+
+           for ( i = 0; i < size; i++ ) {
+                int ssize = size;
+                if ( info != NULL && info->reference != NULL ) {
+                    int s = _tai_list_size(&nested_meta, &info->reference->value.attrlist.list[i]);
+                    ssize = (s > 0) ? s : DEFAULT_LIST_SIZE;
                 }
-                _TAI_META_FREE_LIST(attrlist);
-                return TAI_STATUS_FAILURE;
+                tai_alloc_info_t nested_info = { .list_size = ssize };
+                if ( _tai_metadata_alloc_attr_value(&nested_meta, &(value->attrlist.list[i]), &nested_info) < 0 ) {
+                    for ( j = 0; j < i; j++ ) {
+                        _tai_metadata_free_attr_value(&nested_meta, &value->attrlist.list[j], &nested_info);
+                    }
+                    _TAI_META_FREE_LIST(attrlist);
+                    value->attrlist._alloced = 0;
+                    return TAI_STATUS_NO_MEMORY;
+                }
             }
         }
         break;
@@ -621,6 +703,15 @@ tai_status_t tai_metadata_free_attr_value(
         return TAI_STATUS_INVALID_PARAMETER;
     }
     return _tai_metadata_free_attr_value(metadata, &attr->value, info);
+}
+
+tai_status_t tai_metadata_clear_attr_value(
+        _In_ const tai_attr_metadata_t* const metadata,
+        _In_ tai_attribute_t* const attr) {
+    if ( attr == NULL ) {
+        return TAI_STATUS_INVALID_PARAMETER;
+    }
+    return _tai_metadata_clear_attr_value(metadata, &attr->value);
 }
 
 static tai_status_t _tai_metadata_deepcopy_attr_value(

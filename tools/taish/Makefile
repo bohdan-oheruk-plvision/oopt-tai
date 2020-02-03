@@ -1,46 +1,56 @@
 .PHONY: proto
 
-CC := g++
-CFLAGS := -std=c++11 -g3 -fPIC
-LIB := `pkg-config --libs protobuf grpc++ grpc` -L ../../meta/ -lmetatai -L . -ltai
-INCLUDE := -I ../../meta -I ../../inc -I ./include -I ./lib
+TAI_DIR := ../../
+TAI_META_DIR := $(TAI_DIR)/meta
+TAI_LIB_DIR := $(TAI_DIR)/tools/lib
+TAI_FRAMEWORK_DIR := $(TAI_DIR)/tools/framework
+TAI_BASIC_LIB_DIR := $(TAI_FRAMEWORK_DIR)/examples/basic/
 
-LIB_OBJS = lib/tai.grpc.pb.o lib/tai.pb.o lib/server.o
-OBJS = server/main.o $(LIB_OBJS)
+CFLAGS := -std=c++17 -g3 -fPIC -Wall -Werror
+LIB := `pkg-config --libs protobuf grpc++ grpc` -L ../../meta/ -lmetatai -L. -ltai
+INCLUDE := -I $(TAI_META_DIR) -I $(TAI_DIR)/inc -I ./include -I ./lib -I $(TAI_LIB_DIR)
+
+LIB_GRPC_SRCS := lib/taish.grpc.pb.cc lib/taish.pb.cc
+LIB_OBJS = lib/server.o $(TAI_LIB_DIR)/attribute.o $(LIB_GRPC_SRCS:%.cc=%.o)
+SERVER_SRCS := server/main.cpp
+SERVER_OBJS := $(SERVER_SRCS:%.cpp=%.o)
+
+OBJS = $(LIB_OBJS) $(SERVER_OBJS)
 
 PROG := taish_server
 LIB_PROG := libtaigrpc.so
 
-${PROG}: proto $(OBJS)
-	$(CC) $(CFLAGS) $(INCLUDE) -o $@ $(OBJS) $(LIB) -lgrpc++_reflection -lpthread
+$(PROG): proto $(TAI_META_DIR)/taimetadata.h $(TAI_META_DIR)/libmetatai.so $(OBJS) libtai.so
+	$(CXX) $(CFLAGS) $(INCLUDE) -o $@ $(OBJS) $(LIB) -lgrpc++_reflection -lpthread
 
-lib: proto $(LIB_OBJS)
-	$(CC) -shared $(CFLAGS) $(INCLUDE) -o $(LIB_PROG) $(LIB_OBJS) $(LIB) -lgrpc++_reflection -lpthread
+$(TAI_META_DIR)/taimetadata.h $(TAI_META_DIR)/libmetatai.so:
+	$(MAKE) -C $(TAI_META_DIR)
 
-.cc.o:
-	$(CC) $(CFLAGS) $(INCLUDE) -c -o $@ $<
+libtai.so: Makefile
+	$(MAKE) -C $(TAI_BASIC_LIB_DIR)
+	ln -sf $(TAI_BASIC_LIB_DIR)/$@ $@
 
-.cpp.o:
-	$(CC) $(CFLAGS) $(INCLUDE) -c -o $@ $<
+lib: proto $(LIB_OBJS) Makefile
+	$(CXX) -shared $(CFLAGS) $(INCLUDE) -o $(LIB_PROG) $(LIB_OBJS) $(LIB) -lgrpc++_reflection -lpthread
 
-proto: lib/tai.grpc.pb.cc lib/tai.grpc.pb.h lib/tai.pb.cc lib/tai.pb.h
+.cc.o: Makefile
+	mkdir -p $(@D)
+	$(CXX) $(INCLUDE) $(CFLAGS) -c -o $@ $<
 
-lib/tai.pb.cc lib/tai.pb.h: proto/tai.proto
-	protoc --cpp_out=./lib -I proto tai.proto
+.cpp.o: Makefile
+	mkdir -p $(@D)
+	$(CXX) $(CFLAGS) $(INCLUDE) -c -o $@ $<
 
-lib/tai.grpc.pb.cc lib/tai.grpc.pb.h: proto/tai.proto
-	protoc --grpc_out=./lib --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` -I proto tai.proto
+proto: lib/taish.grpc.pb.cc lib/taish.grpc.pb.h lib/taish.pb.cc lib/taish.pb.h
 
-docker:
-	# realpath doesn't work on travis use cd and pwd instead
-	cd ../../ && docker run -u `id -u`:`id -g` -w /data/tools/taish --rm -v `pwd`:/data -it libtai-grpc-builder make
+lib/taish.pb.cc lib/taish.pb.h: proto/taish/taish.proto
+	protoc --cpp_out=./lib -I proto/taish taish.proto
 
-docker-image:
-	docker build -t libtai-grpc-builder .
+lib/taish.grpc.pb.cc lib/taish.grpc.pb.h: proto/taish/taish.proto
+	protoc --grpc_out=./lib --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` -I proto/taish taish.proto
 
-bash:
-	# realpath doesn't work on travis use cd and pwd instead
-	cd ../../ && docker run --net=host -it -v `pwd`:/data -w /data/tools/taish libtai-grpc-builder bash
+python:
+	python setup.py install
 
 clean:
 	-rm -f ${OBJS} */*.pb\.* ${PROG} ${LIB_PROG}

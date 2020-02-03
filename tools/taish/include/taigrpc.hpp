@@ -13,9 +13,9 @@
 #define __TAIGRPC_HPP__
 
 #include "tai.h"
-#include "tai.grpc.pb.h"
+#include "taish.grpc.pb.h"
 #include "taimetadata.h"
-#include <grpcpp/grpcpp.h>
+#include <grpc++/grpc++.h>
 #include <mutex>
 #include <condition_variable>
 #include <queue>
@@ -24,6 +24,8 @@
 #include <string>
 #include <memory>
 #include <vector>
+
+#include "attribute.hpp"
 
 struct tai_api_module_t
 {
@@ -70,14 +72,9 @@ class TAIAPIModuleList {
         uint32_t m_netif_size;
 };
 
-struct tai_notification_elem_t {
-    tai_attribute_t attr;
-    const tai_attr_metadata_t* meta;
-};
-
 struct tai_notification_t {
     tai_object_id_t oid;
-    std::vector<std::shared_ptr<const tai_notification_elem_t>> attrs;
+    std::vector<tai::S_Attribute> attrs;
 };
 
 struct tai_subscription_t {
@@ -115,19 +112,19 @@ class TAINotifier {
         std::mutex mtx;
 };
 
-class TAIServiceImpl final : public tai::TAI::Service {
+class TAIServiceImpl final : public taish::TAI::Service {
     public:
         TAIServiceImpl(const tai_api_method_table_t* const api) : m_api(api) {};
-        ::grpc::Status ListModule(::grpc::ServerContext* context, const ::tai::ListModuleRequest* request, ::grpc::ServerWriter< ::tai::ListModuleResponse>* writer);
-        ::grpc::Status ListAttributeMetadata(::grpc::ServerContext* context, const ::tai::ListAttributeMetadataRequest* request, ::grpc::ServerWriter< ::tai::ListAttributeMetadataResponse>* writer);
-        ::grpc::Status GetAttributeMetadata(::grpc::ServerContext* context, const ::tai::GetAttributeMetadataRequest* request, ::tai::GetAttributeMetadataResponse* response);
-        ::grpc::Status GetAttribute(::grpc::ServerContext* context, const ::tai::GetAttributeRequest* request, ::tai::GetAttributeResponse* response);
-        ::grpc::Status SetAttribute(::grpc::ServerContext* context, const ::tai::SetAttributeRequest* request, ::tai::SetAttributeResponse* response);
-        ::grpc::Status ClearAttribute(::grpc::ServerContext* context, const ::tai::ClearAttributeRequest* request, ::tai::ClearAttributeResponse* response);
-        ::grpc::Status Monitor(::grpc::ServerContext* context, const ::tai::MonitorRequest* request, ::grpc::ServerWriter< ::tai::MonitorResponse>* writer);
-        ::grpc::Status SetLogLevel(::grpc::ServerContext* context, const ::tai::SetLogLevelRequest* request, ::tai::SetLogLevelResponse* response);
-        ::grpc::Status Create(::grpc::ServerContext* context, const ::tai::CreateRequest* request, ::tai::CreateResponse* response);
-        ::grpc::Status Remove(::grpc::ServerContext* context, const ::tai::RemoveRequest* request, ::tai::RemoveResponse* response);
+        ::grpc::Status ListModule(::grpc::ServerContext* context, const taish::ListModuleRequest* request, ::grpc::ServerWriter< taish::ListModuleResponse>* writer);
+        ::grpc::Status ListAttributeMetadata(::grpc::ServerContext* context, const taish::ListAttributeMetadataRequest* request, ::grpc::ServerWriter< taish::ListAttributeMetadataResponse>* writer);
+        ::grpc::Status GetAttributeMetadata(::grpc::ServerContext* context, const taish::GetAttributeMetadataRequest* request, taish::GetAttributeMetadataResponse* response);
+        ::grpc::Status GetAttribute(::grpc::ServerContext* context, const taish::GetAttributeRequest* request, taish::GetAttributeResponse* response);
+        ::grpc::Status SetAttribute(::grpc::ServerContext* context, const taish::SetAttributeRequest* request, taish::SetAttributeResponse* response);
+        ::grpc::Status ClearAttribute(::grpc::ServerContext* context, const taish::ClearAttributeRequest* request, taish::ClearAttributeResponse* response);
+        ::grpc::Status Monitor(::grpc::ServerContext* context, const taish::MonitorRequest* request, ::grpc::ServerWriter< taish::MonitorResponse>* writer);
+        ::grpc::Status SetLogLevel(::grpc::ServerContext* context, const taish::SetLogLevelRequest* request, taish::SetLogLevelResponse* response);
+        ::grpc::Status Create(::grpc::ServerContext* context, const taish::CreateRequest* request, taish::CreateResponse* response);
+        ::grpc::Status Remove(::grpc::ServerContext* context, const taish::RemoveRequest* request, taish::RemoveResponse* response);
     private:
         std::shared_ptr<TAINotifier> get_notifier(tai_object_id_t oid, tai_attr_id_t nid) {
             auto key = std::pair<tai_object_id_t, tai_attr_id_t>(oid, nid);
