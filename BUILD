@@ -161,3 +161,51 @@ cc_binary(
     ],
 )
 
+cc_library(
+    name = "help_lib",
+    hdrs = [
+        "tools/lib/attribute.hpp",
+        "tools/lib/exception.hpp",
+        "tools/lib/logger.hpp",
+    ],
+    srcs = [
+        "tools/lib/attribute.cpp",
+    ],
+    includes = [
+        "tools/lib/",
+    ],
+    deps = [
+        # "@com_github_oopt_tai//:libmetatai",
+        ":tai_hdrs",
+        ":meta_hdrs",
+    ],
+    visibility = [ "//visibility:public" ],
+)
+
+cc_library(
+    name = "tai_framework",
+    hdrs = [
+        "tools/framework/config.hpp",
+        "tools/framework/fsm.hpp",
+        "tools/framework/object.hpp",
+        "tools/framework/platform.hpp",
+        # "oopt-tai/tools/framework/examples/basic/basic.hpp",
+    ],
+    srcs = [
+        # "oopt-tai/tools/framework/tai.cpp",
+        # "oopt-tai/tools/framework/examples/basic/basic.cpp",
+    ],
+    includes = [
+        "tools/framework/",
+        # "oopt-tai/tools/framework/examples/basic",
+    ],
+    deps = [
+        ":tai_hdrs",
+        ":meta_hdrs",
+        ":help_lib",
+    ],
+    linkopts = [
+        "-fno-gnu-unique",
+    ],
+    visibility = [ "//visibility:public" ],
+)
