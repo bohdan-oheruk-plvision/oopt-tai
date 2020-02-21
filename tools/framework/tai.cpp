@@ -3,6 +3,8 @@
 #include "tai.h"
 #include "exception.hpp"
 
+#include "tai_mux/mux.hpp"
+
 static std::unique_ptr<tai::framework::Platform> g_platform;
 
 /**
@@ -348,7 +350,7 @@ tai_status_t tai_api_initialize(uint64_t flags, const tai_service_method_table_t
         return TAI_STATUS_FAILURE;
     }
     try {
-        g_platform.reset(new ::Platform(services));
+        g_platform.reset(new tai::mux::Platform(services));
     } catch ( tai::Exception& e ) {
         return e.err();
     }
