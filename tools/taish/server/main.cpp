@@ -19,6 +19,7 @@
 #include <cstdlib>
 #include <sstream>
 #include <fstream>
+#include <cstdarg>
 
 #include "json.hpp"
 
@@ -99,7 +100,7 @@ static int load_config(const json& config, std::vector<tai_attribute_t>& list, t
 
 class module {
     public:
-        module(std::string location, const json& config, bool auto_creation) : m_location(location), m_id(0) {
+        module(std::string location, const json& config, bool auto_creation) : m_id(0), m_location(location) {
             std::vector<tai_attribute_t> list;
             tai_attribute_t attr;
 
@@ -114,10 +115,12 @@ class module {
 
             load_config(config, list, TAI_OBJECT_TYPE_MODULE);
 
-            if ( g_api.module_api->create_module(&m_id, list.size(), list.data()) != TAI_STATUS_SUCCESS ) {
-                std::cout << "failed to create module whose location is " << location << std::endl;
+            auto status = g_api.module_api->create_module(&m_id, list.size(), list.data());
+            if ( status != TAI_STATUS_SUCCESS ) {
+                std::cout << "failed to create module whose location is " << location << ", err: " << status << std::endl;
                 return;
             }
+
             std::cout << "created module id: 0x" << std::hex << m_id << std::endl;
 
             list.clear();
@@ -126,7 +129,7 @@ class module {
             list.push_back(attr);
             attr.id = TAI_MODULE_ATTR_NUM_NETWORK_INTERFACES;
             list.push_back(attr);
-            auto status = g_api.module_api->get_module_attributes(m_id, list.size(), list.data());
+            status = g_api.module_api->get_module_attributes(m_id, list.size(), list.data());
             if ( status != TAI_STATUS_SUCCESS ) {
                 throw std::runtime_error("faile to get attribute");
             }
@@ -164,12 +167,12 @@ void module_presence(bool present, char* location) {
     uint64_t v = 1;
     std::lock_guard<std::mutex> g(m);
     q.push(std::pair<bool, std::string>(present, std::string(location)));
-    auto ret = write(event_fd, &v, sizeof(uint64_t));
+    write(event_fd, &v, sizeof(uint64_t));
 }
 
 int module::create_hostif(uint32_t num, const json& config) {
     auto c = config.find("hostif");
-    for ( int i = 0; i < num; i++ ) {
+    for ( uint32_t i = 0; i < num; i++ ) {
         tai_object_id_t id;
         std::vector<tai_attribute_t> list;
         tai_attribute_t attr;
@@ -198,7 +201,7 @@ int module::create_hostif(uint32_t num, const json& config) {
 
 int module::create_netif(uint32_t num, const json& config) {
     auto c = config.find("netif");
-    for ( int i = 0; i < num; i++ ) {
+    for ( uint32_t i = 0; i < num; i++ ) {
         tai_object_id_t id;
         std::vector<tai_attribute_t> list;
         tai_attribute_t attr;
@@ -241,6 +244,7 @@ void grpc_thread(std::string addr) {
 int start_grpc_server(std::string addr) {
     std::thread th(grpc_thread, addr);
     th.detach();
+    return 0;
 }
 
 void object_update(tai_object_type_t type, tai_object_id_t oid, bool is_create) {
@@ -297,40 +301,51 @@ void object_update(tai_object_type_t type, tai_object_id_t oid, bool is_create) 
     }
 }
 
-tai_status_t list_module(tai_api_module_list_t* const l) {
+tai_status_t list_module(std::vector<tai_api_module_t>& l) {
     std::lock_guard<std::mutex> g(m);
-    if ( l->count < g_modules.size() ) {
-        l->count = g_modules.size();
-        return TAI_STATUS_BUFFER_OVERFLOW;
-    }
-    l->count = g_modules.size();
-    auto list = l->list;
-    int i = 0;
     for ( auto v : g_modules ) {
-        list[i].location = v.first;
+        tai_api_module_t list;
+        list.location = v.first;
         auto m = v.second;
-        list[i].present = m->present;
-        list[i].id =  m->id();
-        if ( list[i].hostifs.count < m->hostifs.size() ) {
-            list[i].hostifs.count = m->hostifs.size();
-            return TAI_STATUS_BUFFER_OVERFLOW;
+        list.present = m->present;
+        list.id =  m->id();
+        for ( auto i = 0; i < static_cast<int>(m->hostifs.size()); i++ ) {
+            list.hostifs.emplace_back(m->hostifs[i]);
         }
-        list[i].hostifs.count = m->hostifs.size();
-        for ( auto j = 0; j < m->hostifs.size(); j++ ) {
-            list[i].hostifs.list[j] = m->hostifs[j];
+        for ( auto i = 0; i < static_cast<int>(m->netifs.size()); i++ ) {
+            list.netifs.emplace_back(m->netifs[i]);
         }
-
-        if ( list[i].netifs.count < m->netifs.size() ) {
-            list[i].netifs.count = m->netifs.size();
-            return TAI_STATUS_BUFFER_OVERFLOW;
-        }
-        list[i].netifs.count = m->netifs.size();
-        for ( auto j = 0; j < m->netifs.size(); j++ ) {
-            list[i].netifs.list[j] = m->netifs[j];
-        }
-        i++;
+        l.emplace_back(list);
     }
     return TAI_STATUS_SUCCESS;
+}
+
+static const std::string to_string(tai_log_level_t level) {
+    switch (level) {
+    case TAI_LOG_LEVEL_DEBUG:
+        return "DEBUG";
+    case TAI_LOG_LEVEL_INFO:
+        return "INFO";
+    case TAI_LOG_LEVEL_NOTICE:
+        return "NOTICE";
+    case TAI_LOG_LEVEL_WARN:
+        return "WARN";
+    case TAI_LOG_LEVEL_ERROR:
+        return "ERROR";
+    case TAI_LOG_LEVEL_CRITICAL:
+        return "CRITICAL";
+    default:
+        return std::to_string(static_cast<int>(level));
+    }
+}
+
+static void log_cb(tai_log_level_t lvl, const char *file, int line, const char *function, const char *format, ...) {
+    std::cout << to_string(lvl) << " [" << function << "@" << std::dec << line << "] ";
+    std::va_list va;
+    va_start(va, format);
+    std::vprintf(format, va);
+    va_end(va);
+    std::cout << std::endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -370,7 +385,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    tai_service_method_table_t services;
+    tai_service_method_table_t services = {0};
     services.module_presence = module_presence;
     event_fd = eventfd(0, 0);
 
@@ -380,7 +395,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    status = tai_log_set(TAI_API_UNSPECIFIED, level, nullptr);
+    status = tai_log_set(TAI_API_UNSPECIFIED, level, log_cb);
     if ( status != TAI_STATUS_SUCCESS ) {
         std::cout << "failed to set log level" << std::endl;
         return -1;

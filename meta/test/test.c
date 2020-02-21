@@ -713,36 +713,114 @@ int testSerializeJSONEnumList() {
     return 0;
 }
 
+int testDeserializeJSONCharlist() {
+    uint8_t list[10] = {0};
+    tai_char_list_t value;
+    tai_serialize_option_t option = {
+        .json = true,
+    };
+    value.count = 10;
+    value.list = list;
+    int ret = tai_deserialize_charlist("hello", &value, &option);
+    if ( ret != TAI_SERIALIZE_ERROR ) {
+        return -1;
+    }
+    value.count = 1;
+    char *json = "\"hello\"";
+    ret = tai_deserialize_charlist(json, &value, &option);
+    if ( ret != TAI_STATUS_BUFFER_OVERFLOW ) {
+        return -1;
+    }
+    value.count = 10;
+    ret = tai_deserialize_charlist(json, &value, &option);
+    if ( ret != strlen(json)) {
+        return -1;
+    }
+    ret = strncmp(value.list, "hello", value.count);
+    if ( ret != 0 ) {
+        return -1;
+    }
+    return 0;
+}
+
+int testClearAttrValue() {
+    const tai_attr_metadata_t* meta = tai_metadata_get_attr_metadata(TAI_OBJECT_TYPE_NETWORKIF, TAI_NETWORK_INTERFACE_ATTR_TX_ALIGN_STATUS);
+    tai_attribute_t attr = {0};
+    tai_status_t status;
+    tai_alloc_info_t info = { .list_size = 5 };
+    if ( attr.value.s32list.list != NULL || attr.value.s32list.count != 0 ) {
+        printf("failed initialization\n");
+        return -1;
+    }
+    status = tai_metadata_alloc_attr_value(meta, &attr, &info);
+    if ( status != TAI_STATUS_SUCCESS ) {
+        printf("failed to alloc attr value: %d\n", status);
+        return -1;
+    }
+    if ( attr.value.s32list.list == NULL || attr.value.s32list.count != 5 ) {
+        printf("failed alloc_attr_value() list = %p, count = %d\n", attr.value.s32list.list, attr.value.s32list.count);
+        return -1;
+    }
+    status = tai_metadata_clear_attr_value(meta, &attr);
+    if ( status != TAI_STATUS_SUCCESS ) {
+        printf("failed to clear attr value: %d\n", status);
+        return -1;
+    }
+    if ( attr.value.s32list.list == NULL || attr.value.s32list.count != 0 ) {
+        printf("failed clear_attr_value()\n");
+        return -1;
+    }
+    status = tai_metadata_free_attr_value(meta, &attr, NULL);
+    if ( status != TAI_STATUS_SUCCESS ) {
+        printf("failed to free attr value: %d\n", status);
+        return -1;
+    }
+    if ( attr.value.s32list.list != NULL || attr.value.s32list.count != 0 ) {
+        printf("failed free_attr_value()\n");
+        return -1;
+    }
+    return 0;
+}
+
 typedef int (*testF)();
 
-testF tests[] = {
-    testSerializeModuleOperStatus,
-    testDeserializeModuleOperStatus,
-    testSerializeAttributeEnum,
-    testSerializeAttributeFloat,
-    testSerializeAttributeEnumList,
-    testGetAttrMetadataByAttrIdName,
-    testDeserializeNetworkInterfaceAttr,
-    testDeepcopyAttrValue,
-    testSerializeUnsignedRange,
-    testSerializeSignedRange,
-    testSerializeValueAttrList,
-    testDeserializeU8list,
-    testDeserializeFloatlist,
-    testSerializeListJSON,
-    testSerializeObjectMapList,
-    testDeserializeJSONU8List,
-    testDeserializeJSONFloatList,
-    testDeserializeJSONEnumList,
-    testDeserializeJSONAttrList,
-    testDeserializeJSONAttrList2,
-    testDeserializeJSONBufferOverflow,
-    testDeserializeJSONBufferOverflow2,
-    testSerializeStatus,
-    testSerializeAttrValueType,
-    testDeepequalAttrValue,
-    testSerializeJSONEnumList,
-    NULL,
+struct testCase {
+    const char* name;
+    testF f;
+};
+
+#define D(n) { #n , n }
+
+struct testCase tests[] = {
+    D(testSerializeModuleOperStatus),
+    D(testDeserializeModuleOperStatus),
+    D(testSerializeAttributeEnum),
+    D(testSerializeAttributeFloat),
+    D(testSerializeAttributeEnumList),
+    D(testGetAttrMetadataByAttrIdName),
+    D(testDeserializeNetworkInterfaceAttr),
+    D(testDeepcopyAttrValue),
+    D(testSerializeUnsignedRange),
+    D(testSerializeSignedRange),
+    D(testSerializeValueAttrList),
+    D(testDeserializeU8list),
+    D(testDeserializeFloatlist),
+    D(testSerializeListJSON),
+    D(testSerializeObjectMapList),
+    D(testDeserializeJSONU8List),
+    D(testDeserializeJSONFloatList),
+    D(testDeserializeJSONEnumList),
+    D(testDeserializeJSONAttrList),
+    D(testDeserializeJSONAttrList2),
+    D(testDeserializeJSONBufferOverflow),
+    D(testDeserializeJSONBufferOverflow2),
+    D(testSerializeStatus),
+    D(testSerializeAttrValueType),
+    D(testDeepequalAttrValue),
+    D(testSerializeJSONEnumList),
+    D(testDeserializeJSONCharlist),
+    D(testClearAttrValue),
+    D(NULL),
 };
 
 int main() {
@@ -751,14 +829,16 @@ int main() {
     tai_metadata_log_level = TAI_LOG_LEVEL_DEBUG;
 
     while (true) {
-        if( tests[i] == NULL ) {
+        if( tests[i].f == NULL ) {
             break;
         }
-        ret = tests[i++]();
+        ret = tests[i].f();
         if ( ret < 0 ) {
-            printf("test %d failed\n", --i);
+            printf("test %s(%d) failed\n", tests[i].name, i);
             return -ret;
         }
+        ++i;
     }
+    printf("test all passed!\n");
     return 0;
 }
