@@ -30,12 +30,12 @@ namespace tai {
         if ( size < 0 ) {
             return "null";
         }
-        auto p = std::make_unique<char[]>(size+10);
-        auto ret = tai_serialize_attribute(p.get(), size+1, m_meta, &m_attr, option);
+        auto p = new char[size+10];
+        auto ret = tai_serialize_attribute(p, size+1, m_meta, &m_attr, option);
         if ( ret < 0 || ret > size+1 ) {
             return "null";
         }
-        return std::string(p.get());
+        return std::string(p);
     }
 
     bool cmp(const S_Attribute lhs, const S_Attribute rhs) {
