@@ -1,4 +1,5 @@
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_grpc_library", "py_proto_library")
 
 proto_library(
     name = "tai_proto",
@@ -46,4 +47,16 @@ cc_binary(
         ":taish_lib",
         "//:libtai-stub",
     ],
+)
+
+py_proto_library(
+    name = "tai_py_proto",
+    deps = [":tai_proto"]
+)
+
+py_grpc_library(
+    name = "tai_py_grpc",
+    srcs = [":tai_proto"],
+    deps = [":tai_py_proto"],
+    visibility = [ '//visibility:public' ],
 )
