@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-LIBCLANG_PATH="/usr/lib/llvm-10/lib/libclang.so.1"
+LIBCLANG_PATH="/usr/lib/llvm-11/lib/libclang.so.1"
 exports_files(["pip-requirements.txt"])
 
 load("@tai_meta_deps//:requirements.bzl", meta_all_requirements = "all_requirements")
